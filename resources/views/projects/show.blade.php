@@ -60,7 +60,18 @@
             </div>
             <a href="{{ route('projects.edit', $project) }}" class="rounded bg-indigo-600 px-4 py-2 text-sm text-white">
                 Editar proyecto
-            </a>    
+            </a>
+            {{-- Formulario que envía la petición DELETE a projects.destroy --}}
+            <form method="POST" action="{{ route('projects.destroy', $project) }}"
+                onsubmit="return confirm('¿Seguro que quieres eliminar este proyecto?')">
+                @csrf
+                {{-- Los navegadores solo envían GET/POST: esto lo convierte en DELETE --}}
+                @method('DELETE')
+
+                <button type="submit" class="rounded bg-red-600 px-4 py-2 text-sm text-white">
+                    Eliminar proyecto
+                </button>
+            </form>
             <a href="{{ route('projects.index') }}" class="text-sm text-indigo-600">
                 ← Volver al listado
             </a>

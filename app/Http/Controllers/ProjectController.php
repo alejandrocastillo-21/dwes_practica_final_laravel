@@ -108,14 +108,19 @@ class ProjectController extends Controller
             ->with('success', 'Proyecto actualizado correctamente.');
     }
 
+    // Elimina un proyecto.
+    // Ruta: DELETE /projects/{project}  (projects.destroy)
     public function destroy(Project $project)
     {
-        Gate::authorize('delete', $project);
-
+        // delete() borra la fila de este proyecto en la tabla "projects".
+        // Las filas de la tabla pivote "project_user" asociadas a este
+        // proyecto se borran solas, gracias al cascadeOnDelete()
+        // que pusimos en la migración.
         $project->delete();
 
+        // Tras borrar, el detalle ya no existe, así que volvemos al listado.
         return redirect()->route('projects.index')
-            ->with('success', 'Proyecto eliminado.');
+            ->with('success', 'Proyecto eliminado correctamente.');
     }
 
     /**
