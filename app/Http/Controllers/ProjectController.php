@@ -36,29 +36,44 @@ class ProjectController extends Controller
         return view('projects.show', ['project' => $project]);
     }
 
-    /**
-     * Formulario de creación.
-     */
-    public function create()
-    {
-        return view('projects.create');
-    }
+    // Muestra el formulario para crear un proyecto.
+// Ruta: GET /projects/create  (projects.create)
+public function create()
+{
+    // No necesita datos: solo devuelve la vista con el formulario vacío.
+    return view('projects.create');
+}
 
-    /**
-     * Guarda un proyecto nuevo.
-     */
-    public function store(Request $request)
-    {
-        $data = $this->validateProject($request);
+// Guarda el proyecto nuevo en la base de datos.
+// Ruta: POST /projects  (projects.store)
+public function store(Request $request)
+{
+    // $request contiene todos los datos enviados por el formulario.
 
-        // Asignamos el propietario: el usuario logueado
-        $data['user_id'] = $request->user()->id;
+    // validate() comprueba los datos. Si alguna regla falla, Laravel
+    // vuelve automáticamente al formulario con los mensajes de error
+    // y sin ejecutar el resto del método.
+    $datos = $request->validate([
+        'title'       => 'required|max:255',   // obligatorio, máximo 255 caracteres
+        'description' => 'nullable',           // opcional
+        'deadline'    => 'nullable|date',      // opcional, pero si viene debe ser una fecha
+        'status'      => 'required|in:pendiente,en_progreso,completado', // uno de estos tres valores
+    ]);
 
-        $project = Project::create($data);
+    // Añadimos el propietario: el usuario que tiene la sesión iniciada.
+    // Lo ponemos nosotros (y no en el formulario) para que nadie
+    // pueda crear proyectos a nombre de otro usuario.
+    $datos['user_id'] = $request->user()->id;
 
-        return redirect()->route('projects.show', $project)
-            ->with('success', 'Proyecto creado correctamente.');
-    }
+    // create() inserta una fila en la tabla "projects".
+    // Solo acepta las columnas listadas en $fillable del modelo.
+    $project = Project::create($datos);
+
+    // Redirigimos al detalle del proyecto recién creado.
+    // with() guarda un mensaje "flash": se muestra una vez y desaparece.
+    return redirect()->route('projects.show', $project)
+        ->with('success', 'Proyecto creado correctamente.');
+}   
 
     /**
      * Formulario de edición.

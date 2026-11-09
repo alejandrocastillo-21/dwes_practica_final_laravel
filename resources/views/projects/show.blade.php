@@ -5,6 +5,12 @@
 
     <div class="py-8">
         <div class="mx-auto max-w-4xl space-y-6 px-4">
+            {{-- session('success') existe solo justo después de crear el proyecto --}}
+            @if (session('success'))
+                <div class="rounded bg-green-100 p-4 text-green-800">
+                    {{ session('success') }}
+                </div>
+            @endif
 
             {{-- Tarjeta con los datos del proyecto --}}
             <div class="rounded bg-white p-6 shadow">
