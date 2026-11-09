@@ -58,7 +58,9 @@
                     </tbody>
                 </table>
             </div>
-
+            <a href="{{ route('projects.edit', $project) }}" class="rounded bg-indigo-600 px-4 py-2 text-sm text-white">
+                Editar proyecto
+            </a>    
             <a href="{{ route('projects.index') }}" class="text-sm text-indigo-600">
                 ← Volver al listado
             </a>
