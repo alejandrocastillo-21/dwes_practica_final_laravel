@@ -8,7 +8,7 @@
             {{-- session('success') existe solo justo después de crear el proyecto --}}
             @if (session('success'))
                 <div class="rounded bg-green-100 p-4 text-green-800">
-                    {{ session('success') }}
+                    {{ session('success') }}    
                 </div>
             @endif
 
