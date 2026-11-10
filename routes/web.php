@@ -25,9 +25,10 @@ Route::middleware('auth')->group(function () {
     // ProjectController::class -> controlador que atiende las rutas
     Route::resource('projects', ProjectController::class);
 
-    // Añadir un participante al proyecto
-    Route::post('/projects/{project}/members', [ProjectMemberController::class, 'store'])
-        ->name('projects.members.store');
+    // Rutas de participantes anidadas dentro de proyectos.
+    // only() limita a las rutas que vamos a usar (no necesitamos index, show, etc.)
+    Route::resource('projects.members', ProjectMemberController::class)
+        ->only(['store', 'update', 'destroy']);
 });
 
 require __DIR__ . '/auth.php';

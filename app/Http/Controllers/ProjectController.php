@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 
 class ProjectController extends Controller
 {
@@ -27,17 +29,24 @@ class ProjectController extends Controller
     // Ruta: GET /projects/{project}  (projects.show)
     public function show(Project $project)
     {
-        // Al escribir "Project $project" en el parámetro, Laravel
-        // coge el id de la URL (/projects/3), busca ese proyecto
-        // en la base de datos y nos lo entrega ya cargado.
-        // Si no existe, devuelve un 404 automáticamente.
+        // Usuarios que se pueden añadir: todos menos el propietario
+        // y menos los que ya participan en el proyecto.
+        // - where('id', '!=', ...) excluye al propietario.
+        // - whereNotIn('id', ...) excluye a los participantes actuales.
+        //   $project->members->pluck('id') devuelve solo la lista de ids.
+        $users = User::where('id', '!=', $project->user_id)
+            ->whereNotIn('id', $project->members->pluck('id'))
+            ->get();
 
-        // Pasamos el proyecto a la vista resources/views/projects/show.blade.php
-        return view('projects.show', ['project' => $project]);
+        // Enviamos a la vista el proyecto y la lista de usuarios disponibles
+        return view('projects.show', [
+            'project' => $project,
+            'users' => $users,
+        ]);
     }
 
     // Muestra el formulario para crear un proyecto.
-// Ruta: GET /projects/create  (projects.create)
+    // Ruta: GET /projects/create  (projects.create)
     public function create()
     {
         // No necesita datos: solo devuelve la vista con el formulario vacío.
@@ -79,9 +88,11 @@ class ProjectController extends Controller
      * Formulario de edición.
      */
     // Muestra el formulario de edición con los datos actuales.
-// Ruta: GET /projects/{project}/edit  (projects.edit)
+    // Ruta: GET /projects/{project}/edit  (projects.edit)
     public function edit(Project $project)
     {
+        
+        Gate::authorize('update', $project);
         // Laravel ya ha buscado el proyecto por el id de la URL.
         // Se lo pasamos a la vista para rellenar el formulario.
         return view('projects.edit', ['project' => $project]);
@@ -91,6 +102,7 @@ class ProjectController extends Controller
     // Ruta: PUT /projects/{project}  (projects.update)
     public function update(Request $request, Project $project)
     {
+        Gate::authorize('update', $project);
         // Mismas reglas de validación que en store().
         $datos = $request->validate([
             'title' => 'required|max:255',
@@ -112,6 +124,7 @@ class ProjectController extends Controller
     // Ruta: DELETE /projects/{project}  (projects.destroy)
     public function destroy(Project $project)
     {
+        
         // delete() borra la fila de este proyecto en la tabla "projects".
         // Las filas de la tabla pivote "project_user" asociadas a este
         // proyecto se borran solas, gracias al cascadeOnDelete()
