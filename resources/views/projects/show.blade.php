@@ -116,9 +116,11 @@
                     </tbody>
                 </table>
             </div>
+            @can('update', $project)
             <a href="{{ route('projects.edit', $project) }}" class="rounded bg-indigo-600 px-4 py-2 text-sm text-white">
                 Editar proyecto
             </a>
+            @endcan
             {{-- Formulario que envía la petición DELETE a projects.destroy --}}
             <form method="POST" action="{{ route('projects.destroy', $project) }}"
                 onsubmit="return confirm('¿Seguro que quieres eliminar este proyecto?')">
@@ -183,10 +185,11 @@
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
-
+                            @can('delete', $project)
                             <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-white">
                                 Añadir participante
                             </button>
+                            @endcan
                         </form>
                     @else
                         {{-- Si ya están todos los usuarios dentro, no hay nadie que añadir --}}

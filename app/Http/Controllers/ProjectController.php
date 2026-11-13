@@ -124,7 +124,7 @@ class ProjectController extends Controller
     // Ruta: DELETE /projects/{project}  (projects.destroy)
     public function destroy(Project $project)
     {
-        
+        Gate::authorize('delete', $project);
         // delete() borra la fila de este proyecto en la tabla "projects".
         // Las filas de la tabla pivote "project_user" asociadas a este
         // proyecto se borran solas, gracias al cascadeOnDelete()
