@@ -10,8 +10,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Cualquier visita a /dashboard redirige al listado de proyectos.
+// Mantenemos el nombre "dashboard" porque Breeze lo usa en varios sitios
+// (por ejemplo, tras iniciar sesión o registrarse).
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return redirect()->route('projects.index');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
