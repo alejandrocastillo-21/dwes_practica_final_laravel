@@ -128,9 +128,11 @@
                 {{-- Los navegadores solo envían GET/POST: esto lo convierte en DELETE --}}
                 @method('DELETE')
 
+                @can('delete', $project)
                 <button type="submit" class="rounded bg-red-600 px-4 py-2 text-sm text-white">
                     Eliminar proyecto
                 </button>
+                @endcan
             </form>
             {{-- Solo el propietario ve el formulario (usa la Policy, igual que el botón Editar) --}}
             @can('update', $project)
