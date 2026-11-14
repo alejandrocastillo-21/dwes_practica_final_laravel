@@ -1,205 +1,236 @@
 <x-app-layout>
+    {{-- Mismo bloque que en el listado: elige color y texto según el estado --}}
+    @php
+        if ($project->status == 'pendiente') {
+            $colorEstado = 'bg-yellow-100 text-yellow-800';
+            $textoEstado = 'Pendiente';
+        } elseif ($project->status == 'en_progreso') {
+            $colorEstado = 'bg-blue-100 text-blue-800';
+            $textoEstado = 'En progreso';
+        } else {
+            $colorEstado = 'bg-green-100 text-green-800';
+            $textoEstado = 'Completado';
+        }
+    @endphp
+
+    {{-- ========== CABECERA ========== --}}
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">{{ $project->title }}</h2>
+        <div class="flex items-center justify-between">
+
+            {{-- Título + etiqueta de estado --}}
+            <div class="flex items-center gap-3">
+                <h2 class="text-xl font-semibold text-gray-800">{{ $project->title }}</h2>
+                <span class="rounded-full px-3 py-1 text-xs font-medium {{ $colorEstado }}">
+                    {{ $textoEstado }}
+                </span>
+            </div>
+
+            {{-- Botones: cada uno aparece solo si su regla de la Policy lo permite --}}
+            <div class="flex items-center gap-2">
+                @can('update', $project)
+                    <a href="{{ route('projects.edit', $project) }}"
+                       class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                        Editar
+                    </a>
+                @endcan
+
+                @can('delete', $project)
+                    <form method="POST" action="{{ route('projects.destroy', $project) }}"
+                          onsubmit="return confirm('¿Seguro que quieres eliminar este proyecto?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
+                            Eliminar
+                        </button>
+                    </form>
+                @endcan
+            </div>
+        </div>
     </x-slot>
 
     <div class="py-8">
         <div class="mx-auto max-w-4xl space-y-6 px-4">
-            {{-- session('success') existe solo justo después de crear el proyecto --}}
+
+            {{-- Mensaje de éxito --}}
             @if (session('success'))
-                <div class="rounded bg-green-100 p-4 text-green-800">
+                <div class="rounded-lg bg-green-100 p-4 text-green-800">
                     {{ session('success') }}
                 </div>
             @endif
 
-            {{-- Tarjeta con los datos del proyecto --}}
-            <div class="rounded bg-white p-6 shadow">
-                <p class="text-gray-700">{{ $project->description }}</p>
+            {{-- Recuadro con TODOS los errores de validación (si los hay) --}}
+            @if ($errors->any())
+                <div class="rounded-lg bg-red-100 p-4 text-sm text-red-800">
+                    <ul class="list-inside list-disc">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
-                <p class="mt-4 text-sm text-gray-600">
-                    Propietario: {{ $project->owner->name }}
-                </p>
-                <p class="text-sm text-gray-600">
-                    Estado: {{ $project->status }}
-                </p>
-                <p class="text-sm text-gray-600">
-                    Fecha límite: {{ $project->deadline }}
-                </p>
+            {{-- ========== TARJETA: INFORMACIÓN ========== --}}
+            <div class="rounded-xl bg-white p-6 shadow-sm">
+                <p class="text-gray-700">{{ $project->description ?? 'Sin descripción.' }}</p>
+
+                {{-- Cuadrícula de 3 datos, separada por una línea --}}
+                <div class="mt-6 grid gap-4 border-t pt-4 text-sm md:grid-cols-3">
+                    <div>
+                        <p class="text-gray-500">Propietario</p>
+                        <p class="font-medium text-gray-900">{{ $project->owner->name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Fecha límite</p>
+                        <p class="font-medium text-gray-900">{{ $project->deadline ?? 'Sin fecha' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Participantes</p>
+                        {{-- count() cuenta los elementos de la colección members --}}
+                        <p class="font-medium text-gray-900">{{ $project->members->count() }}</p>
+                    </div>
+                </div>
             </div>
 
-            {{-- Tarjeta con la tabla de participantes --}}
-            <div class="rounded bg-white p-6 shadow">
-                <h3 class="mb-4 text-lg font-semibold">Participantes</h3>
+            {{-- ========== TARJETA: PARTICIPANTES ========== --}}
+            <div class="rounded-xl bg-white p-6 shadow-sm">
+                <h3 class="mb-4 text-lg font-semibold text-gray-900">Participantes</h3>
 
-                {{-- Errores de validación al modificar un participante --}}
-                @error('role')
-                    <p class="mb-2 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-                @error('contribution_hours')
-                    <p class="mb-2 text-sm text-red-600">{{ $message }}</p>
-                @enderror
-
-                <table class="w-full text-left text-sm">
-                    <thead>
-                        <tr class="border-b text-gray-500">
-                            <th class="py-2">Nombre</th>
-                            <th class="py-2">Rol</th>
-                            <th class="py-2">Horas</th>
-                            {{-- La columna de acciones solo existe para el propietario --}}
-                            @can('update', $project)
-                                <th class="py-2">Modificar</th>
-                                <th class="py-2">Quitar</th>
-                            @endcan
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($project->members as $member)
-                            <tr class="border-b">
-                                <td class="py-2">{{ $member->name }}</td>
-                                <td class="py-2">{{ $member->pivot->role }}</td>
-                                <td class="py-2">{{ $member->pivot->contribution_hours }}</td>
-
+                {{-- overflow-x-auto: si la tabla no cabe, tiene scroll en lugar de romper el diseño --}}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b bg-gray-50 text-gray-500">
+                                <th class="px-3 py-2">Nombre</th>
+                                <th class="px-3 py-2">Rol</th>
+                                <th class="px-3 py-2">Horas</th>
                                 @can('update', $project)
-                                    <td class="py-2">
-                                        {{-- Un formulario por participante.
-                                        Se envía a projects.members.update con el proyecto y el usuario. --}}
-                                        <form method="POST" action="{{ route('projects.members.update', [$project, $member]) }}"
-                                            class="flex items-center gap-2">
-                                            @csrf
-                                            {{-- Simulamos el método PUT --}}
-                                            @method('PUT')
-
-                                            {{-- Rol: seleccionamos el valor actual de la pivote --}}
-                                            <select name="role" class="rounded border-gray-300 text-sm">
-                                                <option value="Desarrollador" @selected($member->pivot->role == 'Desarrollador')>
-                                                    Desarrollador</option>
-                                                <option value="Diseñador" @selected($member->pivot->role == 'Diseñador')>Diseñador
-                                                </option>
-                                                <option value="Tester" @selected($member->pivot->role == 'Tester')>Tester</option>
-                                                <option value="Analista" @selected($member->pivot->role == 'Analista')>Analista
-                                                </option>
-                                            </select>
-
-                                            {{-- Horas: valor actual de la pivote --}}
-                                            <input type="number" name="contribution_hours" min="0"
-                                                value="{{ $member->pivot->contribution_hours }}"
-                                                class="w-20 rounded border-gray-300 text-sm">
-
-                                            <button type="submit" class="rounded bg-indigo-600 px-3 py-1 text-white">
-                                                Guardar
-                                            </button>
-                                        </form>
-                                    </td>
-
-                                    <td class="py-2">
-                                        {{-- Formulario que envía DELETE a projects.members.destroy.
-                                        Pasamos el proyecto y el usuario, en ese orden. --}}
-                                        <form method="POST"
-                                            action="{{ route('projects.members.destroy', [$project, $member]) }}"
-                                            onsubmit="return confirm('¿Quitar a este participante del proyecto?')">
-                                            @csrf
-                                            {{-- Simulamos el método DELETE --}}
-                                            @method('DELETE')
-
-                                            <button type="submit" class="rounded bg-red-600 px-3 py-1 text-white">
-                                                Quitar
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <th class="px-3 py-2">Acciones</th>
                                 @endcan
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="py-4 text-gray-500">Aún no hay participantes.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @forelse ($project->members as $member)
+                                <tr class="border-b last:border-0">
+                                    <td class="px-3 py-3 font-medium text-gray-900">{{ $member->name }}</td>
+                                    {{-- pivot da acceso a las columnas de la tabla project_user --}}
+                                    <td class="px-3 py-3">
+                                        <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-800">
+                                            {{ $member->pivot->role }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-3">{{ $member->pivot->contribution_hours }} h</td>
+
+                                    @can('update', $project)
+                                        <td class="px-3 py-3">
+                                            {{-- Los dos formularios (modificar y quitar) en una misma fila --}}
+                                            <div class="flex items-center gap-3">
+
+                                                {{-- Formulario: modificar rol y horas --}}
+                                                <form method="POST"
+                                                      action="{{ route('projects.members.update', [$project, $member]) }}"
+                                                      class="flex items-center gap-2">
+                                                    @csrf
+                                                    @method('PUT')
+
+                                                    <select name="role" class="rounded-lg border-gray-300 text-sm">
+                                                        <option value="Desarrollador" @selected($member->pivot->role == 'Desarrollador')>Desarrollador</option>
+                                                        <option value="Diseñador" @selected($member->pivot->role == 'Diseñador')>Diseñador</option>
+                                                        <option value="Tester" @selected($member->pivot->role == 'Tester')>Tester</option>
+                                                        <option value="Analista" @selected($member->pivot->role == 'Analista')>Analista</option>
+                                                    </select>
+
+                                                    <input type="number" name="contribution_hours" min="0"
+                                                           value="{{ $member->pivot->contribution_hours }}"
+                                                           class="w-20 rounded-lg border-gray-300 text-sm">
+
+                                                    <button type="submit"
+                                                            class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
+                                                        Guardar
+                                                    </button>
+                                                </form>
+
+                                                {{-- Formulario: quitar participante --}}
+                                                <form method="POST"
+                                                      action="{{ route('projects.members.destroy', [$project, $member]) }}"
+                                                      onsubmit="return confirm('¿Quitar a este participante del proyecto?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                            class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">
+                                                        Quitar
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    @endcan
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="px-3 py-6 text-center text-gray-500">
+                                        Aún no hay participantes en este proyecto.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            @can('update', $project)
-            <a href="{{ route('projects.edit', $project) }}" class="rounded bg-indigo-600 px-4 py-2 text-sm text-white">
-                Editar proyecto
-            </a>
-            @endcan
-            {{-- Formulario que envía la petición DELETE a projects.destroy --}}
-            <form method="POST" action="{{ route('projects.destroy', $project) }}"
-                onsubmit="return confirm('¿Seguro que quieres eliminar este proyecto?')">
-                @csrf
-                {{-- Los navegadores solo envían GET/POST: esto lo convierte en DELETE --}}
-                @method('DELETE')
 
-                @can('delete', $project)
-                <button type="submit" class="rounded bg-red-600 px-4 py-2 text-sm text-white">
-                    Eliminar proyecto
-                </button>
-                @endcan
-            </form>
-            {{-- Solo el propietario ve el formulario (usa la Policy, igual que el botón Editar) --}}
+            {{-- ========== TARJETA: AÑADIR PARTICIPANTE (solo propietario) ========== --}}
             @can('update', $project)
-                <div class="rounded bg-white p-6 shadow">
-                    <h3 class="mb-4 text-lg font-semibold">Añadir participante</h3>
+                <div class="rounded-xl bg-white p-6 shadow-sm">
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900">Añadir participante</h3>
 
-                    {{-- isNotEmpty() es true si hay usuarios disponibles --}}
                     @if ($users->isNotEmpty())
-                        {{-- Enviamos a projects.members.store pasando el proyecto --}}
-                        <form method="POST" action="{{ route('projects.members.store', $project) }}" class="space-y-4">
+                        <form method="POST" action="{{ route('projects.members.store', $project) }}"
+                              class="grid gap-4 md:grid-cols-4 md:items-end">
                             @csrf
 
                             {{-- Usuario --}}
                             <div>
                                 <label for="user_id" class="block text-sm font-medium text-gray-700">Usuario</label>
-                                <select id="user_id" name="user_id" class="mt-1 block w-full rounded border-gray-300">
-                                    <option value="">Selecciona un usuario</option>
+                                <select id="user_id" name="user_id" class="mt-1 block w-full rounded-lg border-gray-300">
+                                    <option value="">Selecciona...</option>
                                     @foreach ($users as $user)
-                                        {{-- El valor enviado es el id; el texto visible, el nombre --}}
                                         <option value="{{ $user->id }}" @selected(old('user_id') == $user->id)>
                                             {{ $user->name }}
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('user_id')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
                             </div>
 
                             {{-- Rol --}}
                             <div>
                                 <label for="role" class="block text-sm font-medium text-gray-700">Rol</label>
-                                <select id="role" name="role" class="mt-1 block w-full rounded border-gray-300">
+                                <select id="role" name="role" class="mt-1 block w-full rounded-lg border-gray-300">
                                     <option value="Desarrollador" @selected(old('role') == 'Desarrollador')>Desarrollador</option>
                                     <option value="Diseñador" @selected(old('role') == 'Diseñador')>Diseñador</option>
                                     <option value="Tester" @selected(old('role') == 'Tester')>Tester</option>
                                     <option value="Analista" @selected(old('role') == 'Analista')>Analista</option>
                                 </select>
-                                @error('role')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
                             </div>
 
-                            {{-- Horas (opcional) --}}
+                            {{-- Horas --}}
                             <div>
-                                <label for="contribution_hours" class="block text-sm font-medium text-gray-700">Horas
-                                    trabajadas</label>
+                                <label for="contribution_hours" class="block text-sm font-medium text-gray-700">Horas</label>
                                 <input type="number" id="contribution_hours" name="contribution_hours" min="0"
-                                    value="{{ old('contribution_hours', 0) }}"
-                                    class="mt-1 block w-full rounded border-gray-300">
-                                @error('contribution_hours')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                       value="{{ old('contribution_hours', 0) }}"
+                                       class="mt-1 block w-full rounded-lg border-gray-300">
                             </div>
-                            @can('delete', $project)
-                            <button type="submit" class="rounded bg-indigo-600 px-4 py-2 text-white">
-                                Añadir participante
+
+                            <button type="submit"
+                                    class="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700">
+                                Añadir
                             </button>
-                            @endcan
                         </form>
                     @else
-                        {{-- Si ya están todos los usuarios dentro, no hay nadie que añadir --}}
                         <p class="text-sm text-gray-500">No quedan usuarios disponibles para añadir.</p>
                     @endif
                 </div>
             @endcan
-            <a href="{{ route('projects.index') }}" class="text-sm text-indigo-600">
+
+            <a href="{{ route('projects.index') }}" class="inline-block text-sm font-medium text-indigo-600 hover:text-indigo-800">
                 ← Volver al listado
             </a>
         </div>
