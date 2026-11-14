@@ -15,13 +15,11 @@ class ProjectController extends Controller
      */
     public function index()
     {
-        // Project::all() hace "SELECT * FROM projects"
-        // y devuelve una colección con todos los proyectos.
-        $projects = Project::all();
+        // with('owner')      -> carga el propietario de todos los proyectos de golpe
+        // withCount('members') -> añade "members_count" a cada proyecto
+        // latest()           -> los más recientes primero
+        $projects = Project::with('owner')->withCount('members')->latest()->get();
 
-        // view('projects.index') busca el archivo
-        // resources/views/projects/index.blade.php
-        // El array pasa la variable $projects a la vista.
         return view('projects.index', ['projects' => $projects]);
     }
 

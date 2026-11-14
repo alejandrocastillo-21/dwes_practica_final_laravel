@@ -1,49 +1,74 @@
 <x-app-layout>
-    {{-- Slot "header": la cabecera que Breeze muestra bajo el menú --}}
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Proyectos</h2>
+        {{-- Título a la izquierda y botón a la derecha --}}
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-800">Proyectos</h2>
+            <a href="{{ route('projects.create') }}"
+               class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                Nuevo proyecto
+            </a>
+        </div>
     </x-slot>
 
     <div class="py-8">
         <div class="mx-auto max-w-7xl px-4">
 
-            {{-- Enlace al formulario de crear (lo haremos en el paso 5) --}}
-            <a href="{{ route('projects.create') }}"
-               class="mb-6 inline-block rounded bg-indigo-600 px-4 py-2 text-white">
-                Nuevo proyecto
-            </a>
+            {{-- Mensaje de éxito --}}
+            @if (session('success'))
+                <div class="mb-6 rounded-lg bg-green-100 p-4 text-green-800">
+                    {{ session('success') }}
+                </div>
+            @endif
 
-            {{-- Cuadrícula: 1 columna en móvil, 3 en pantallas grandes --}}
             <div class="grid gap-6 md:grid-cols-3">
-
-                {{-- Recorremos $projects, la variable que envía el controlador --}}
                 @forelse ($projects as $project)
-                    <div class="rounded bg-white p-6 shadow">
-                        <h3 class="text-lg font-semibold">{{ $project->title }}</h3>
 
-                        <p class="mt-2 text-sm text-gray-600">
-                            {{ $project->description }}
+                    {{-- Según el estado, elegimos el color y el texto de la etiqueta --}}
+                    @php
+                        if ($project->status == 'pendiente') {
+                            $colorEstado = 'bg-yellow-100 text-yellow-800';
+                            $textoEstado = 'Pendiente';
+                        } elseif ($project->status == 'en_progreso') {
+                            $colorEstado = 'bg-blue-100 text-blue-800';
+                            $textoEstado = 'En progreso';
+                        } else {
+                            $colorEstado = 'bg-green-100 text-green-800';
+                            $textoEstado = 'Completado';
+                        }
+                    @endphp
+
+                    {{-- Tarjeta. "hover:" aplica el estilo al pasar el ratón por encima --}}
+                    <div class="flex flex-col rounded-xl bg-white p-6 shadow-sm transition hover:shadow-md">
+
+                        {{-- Título y etiqueta de estado --}}
+                        <div class="flex items-start justify-between gap-2">
+                            <h3 class="text-lg font-semibold text-gray-900">{{ $project->title }}</h3>
+                            <span class="shrink-0 rounded-full px-3 py-1 text-xs font-medium {{ $colorEstado }}">
+                                {{ $textoEstado }}
+                            </span>
+                        </div>
+
+                        {{-- Descripción recortada a 100 caracteres --}}
+                        <p class="mt-3 flex-1 text-sm text-gray-600">
+                            {{ \Illuminate\Support\Str::limit($project->description, 100) }}
                         </p>
 
-                        {{-- owner es la relación definida en el modelo Project --}}
-                        <p class="mt-4 text-xs text-gray-500">
-                            Propietario: {{ $project->owner->name }}
-                        </p>
-                        <p class="text-xs text-gray-500">
-                            Estado: {{ $project->status }}
-                        </p>
+                        {{-- Datos del proyecto --}}
+                        <div class="mt-4 space-y-1 border-t pt-4 text-xs text-gray-500">
+                            <p>Propietario: <span class="font-medium text-gray-700">{{ $project->owner->name }}</span></p>
+                            <p>Fecha límite: <span class="font-medium text-gray-700">{{ $project->deadline ?? 'Sin fecha' }}</span></p>
+                            {{-- members_count lo añade withCount() en el controlador --}}
+                            <p>Participantes: <span class="font-medium text-gray-700">{{ $project->members_count }}</span></p>
+                        </div>
 
-                        {{-- route('projects.show', $project) genera /projects/{id} --}}
                         <a href="{{ route('projects.show', $project) }}"
-                           class="mt-4 inline-block text-sm text-indigo-600">
-                            Ver detalle
+                           class="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                            Ver detalle →
                         </a>
                     </div>
                 @empty
-                    {{-- Se muestra solo si no hay proyectos --}}
                     <p class="text-gray-500">Todavía no hay proyectos.</p>
                 @endforelse
-
             </div>
         </div>
     </div>
